@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web chat đăng nhập</title>
+</head>
+<body>
+    <div id="main">
+        <h3>Đăng nhập</h3>
+        <% if ( typeof err !== "undefined" && err) { %>
+            <p><%= err %></p>
+        <% } %>
+        <div id="signin">
+            <% if ( typeof success !== "undefined" && success) { %>
+                <p><%= success %></p>
+            <% } %>
+
+            <form action="/api/user/login" method="post">
+                <table>
+                    <tr>
+                        <th>Địa chỉ email</th>
+                        <td> <input type="email" name="email" required /></td>
+                    </tr>
+                    <tr>
+                        <th>Mật khẩu</th>
+                        <td> <input type="password" name="password" required /></td>
+                    </tr>
+                </table>
+                <button>Đăng Nhập</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

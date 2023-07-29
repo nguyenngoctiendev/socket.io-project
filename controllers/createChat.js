@@ -8,20 +8,15 @@ const createGroupChat = async (req, res) => {
 
   console.log(name);
   console.log(users);
-
   if (!users || !name) {
     return res.status(400).json({ err: "Please fill out the fields" });
   }
-  if (users.length < 2) {
-    return res.status(400).send({ err: "Nhóm phải có ít nhất hai thành viên" });
-  }
-
   try {
     const groupChat = await chatModel.create({
       chatName: name,
       users: users,
       groupChat: true,
-      groupAdmin: users
+      groupAdmin: req.user,
     });
 
     const getAllChat = await chatModel

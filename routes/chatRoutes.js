@@ -1,5 +1,6 @@
 const express = require("express");
 const singleChat = require("../controllers/singleChat")
+const groupChat = require("../controllers/groupChat")
 const allChat = require("../controllers/allChat");
 const createGroupChat = require("../controllers/createChat");
 const removeFromGroup = require("../controllers/removeUser");
@@ -7,9 +8,10 @@ const addUser = require("../controllers/addUser");
 const renameGroup = require("../controllers/renameGroup");
 const auth = require("../middleware/auth");
 const router = express.Router();
+router.get("/groupchat", auth, groupChat)
 router.post("/", auth, singleChat);
 router.get("/", auth, allChat);
-router.post("/group", createGroupChat, auth);
+router.post("/group", createGroupChat, auth );
 router.put("/rename", auth, renameGroup);
 router.put("/remove", auth, removeFromGroup);
 router.put("/add", auth, addUser);

@@ -6,5 +6,5 @@ const allUsers = require("../controllers/allUsers")
 const router = express.Router();
 router.route("/").post(register.register);
 router.route("/login").post(login.userLogin, authMiddleware );
-router.route("/all").get(allUsers)
+router.route("/all").get(allUsers);
 module.exports = router;

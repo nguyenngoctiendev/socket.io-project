@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang chủ web chat</title>
+</head>
+<body>
+  <h1>Chat với tôi</h1>
+  <h3>Chat</h3>
+  <button onclick="createRoomChat()">Tạo nhóm mới</button>
+  <div id="createChatForm" style="display: none;">
+    <input type="text" id="roomName" placeholder="Tên phòng chat" required />
+    <button onclick="submitRoom()">Tạo nhóm</button>
+  </div>
+  <div id="displayRoom">
+    <!-- Các phòng chat hiện có sẽ được hiển thị ở đây -->
+  </div>
+  <div id="chatRoom">
+    <!-- Tin nhắn của phòng chat sẽ được hiển thị ở đây -->
+  </div>
+  <div id="chatBox" style="display: none;">
+    <input type="text" id="messageInput" placeholder="Nhập tin nhắn" />
+    <button onclick="sendMessage()">Gửi</button>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var accessToken = '<%= accessToken !== "undefined" ? accessToken : "" %>';
+    const socket = io({ query: { accessToken } });
+
+    // Khai báo biến selectedChatRoomId
+    let selectedChatRoomId = null;
+
+    // Khi kết nối thành công, không cần emit thông tin user đến server nữa
+    socket.on("connect", () => {
+      console.log("Connected to Socket.IO server");
+      fetchGroupChat(); // Gọi hàm để lấy danh sách các phòng chat
+    });
+
+    // Hàm để lấy danh sách các phòng chat
+    function fetchGroupChat() {
+      fetch("/api/chat/groupchat")
+        .then((response) => response.json())
+        .then((rooms) => {
+          displayChatRoom(rooms); // Hiển thị danh sách các phòng chat
+        })
+        .catch((error) => {
+          console.error("Error fetching group chat:", error);
+        });
+    }
+
+    // Xử lý sự kiện nhận tin nhắn mới
+    socket.on("newMessage", (message) => {
+      const chatRoomDiv = document.getElementById("chatRoom");
+      const senderName = message.sender.name;
+      const messageContent = message.content;
+      const messageHtml = `<p><strong>${senderName}:</strong> ${messageContent}</p>`;
+      chatRoomDiv.innerHTML += messageHtml;
+    });
+
+    // Hiển thị phòng chat
+    function displayChatRoom(rooms) {
+      const displayRoom = document.getElementById("displayRoom");
+      displayRoom.innerHTML = "<h3>Các phòng chat hiện có</h3>";
+      rooms.forEach((room) => {
+        const roomName = room.chatName;
+        const roomId = room._id;
+        const buttonHtml = `<button onclick="joinChat('${roomId}')">Tham gia chat</button>`;
+        displayRoom.innerHTML += `<p>${roomName}</p>${buttonHtml}`;
+      });
+    }
+
+    // Tham gia phòng chat
+    function joinChat(chatRoomId) {
+      socket.emit("join-chat", chatRoomId);
+      fetchAndDisplayChatRoom(chatRoomId);
+      document.getElementById("chatBox").style.display = "block";
+
+      // Gán giá trị cho biến selectedChatRoomId khi người dùng tham gia vào một phòng chat cụ thể
+      selectedChatRoomId = chatRoomId;
+    }
+
+    // Fetch và hiển thị tin nhắn trong phòng chat
+    function fetchAndDisplayChatRoom(chatRoom) {
+      fetch(`api/message/${chatRoom}`)
+        .then((response) => response.json())
+        .then((messages) => {
+          const chatRoomDiv = document.getElementById("chatRoom");
+          chatRoomDiv.innerHTML = ""; // Xóa tin nhắn cũ
+          messages.forEach((ms) => {
+            const senderName = ms.sender.name;
+            const messageContent = ms.content;
+            const messageHtml = `<p><strong>${senderName}: </strong> ${messageContent}</p>`;
+            chatRoomDiv.innerHTML += messageHtml;
+            document.getElementById("messageInput").value = '';
+          });
+        })
+        .catch((err) => {
+          console.error(err.message);
+        });
+    }
+
+    // Gửi tin nhắn
+    function sendMessage() {
+      const messageInput = document.getElementById("messageInput").value;
+      if (!messageInput) return; // Nếu không có tin nhắn, không làm
+      if (!messageInput) return; // Nếu không có tin nhắn, không làm gì cả
+      console.log("Selected chat room ID:", selectedChatRoomId); // Kiểm tra giá trị của selectedChatRoomId
+      fetch("api/message", {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+          "authorization": "Bearer " + getToken()
+        },
+        body: JSON.stringify({
+          content: messageInput,
+          chatId: selectedChatRoomId
+        })
+      })
+      .then((response) => response.json())
+      .then((message) => {
+        const chatRoomDiv = document.getElementById("chatRoom");
+        const senderName = message.sender.name;
+        const messageContent = message.content;
+        const messageHtml = `<p><strong>${senderName}: </strong> ${messageContent}</p>`;
+        chatRoomDiv.innerHTML += messageHtml;
+        document.getElementById("messageInput").value = '';
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+    }
+
+    function createRoomChat() {
+      document.getElementById("createChatForm").style.display = "block";
+    }
+
+    function submitRoom() {
+      const roomName = document.getElementById("roomName").value;
+      if (roomName) {
+        fetch("api/chat/group", {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+            "authorization": "Bearer " + getToken()
+          },
+          body: JSON.stringify({
+            name: roomName,
+            users: []        
+          })
+        })
+        .then(response => response.json())
+        .then(() => {
+          alert("Tạo phòng chat thành công");
+          // Sau khi tạo phòng chat thành công, gọi lại fetchGroupChat() để cập nhật danh sách các phòng chat
+          fetchGroupChat();
+          document.getElementById("createChatForm").style.display = "none";
+        })
+        .catch(err => {
+          alert("Tạo phòng chat không thành công");  
+        });
+      }   
+    }
+
+    function getToken() {
+      return accessToken;
+    }
+  </script>
+</body>
+</html>

@@ -1,44 +1,50 @@
 const express = require("express");
+const ejs = require("ejs");
 const cors = require("cors");
+const session = require("express-session");
 const db = require("./config/database");
 const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
-const messageRoutes = require("./routes/messageRoutes")
+const messageRoutes = require("./routes/messageRoutes");
+const viewRoutes = require("./routes/viewsRoutes");
 const dotenv = require("dotenv").config();
-const cookieParser = require("cookie-parser")
 const app = express();
+
 db.dbConnect();
+
+app.use(session({ secret: process.env.session, resave: false, saveUninitialized: true, cookie: { maxAge: 2592000000 } }));
+app.set("view engine", "ejs");
 app.use(cors());
-app.use(cookieParser("userId"))
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static("public"))
-app.use("/api/user", userRoutes)
+app.use("/", viewRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
-app.use("/api/message", messageRoutes)
+app.use("/api/message", messageRoutes);
+
 app.get("/running", (req, res) => {
-  res.send("api running")
+  res.send("api running");
 });
 
-const port = process.env.PORT;
+const port = process.env.PORT || 3000; // Set a default port number
 const server = app.listen(port, () => {
-  console.log(`The server is running on port ${port}`)
-})
+  console.log(`The server is running on port ${port}`);
+});
 
-const socket = require("socket.io")
+const socket = require("socket.io");
 const io = socket(server);
 
 io.on("connection", (socket) => {
   console.log("User connected");
 
   socket.on("setup", (data) => {
-    socket.join(data._id)
-    socket.emit("connected")
+    socket.join(data._id);
+    socket.emit("connected");
   });
 
-  socket.on("join-chat", (chatRoom) => {
-    socket.join(chatRoom);
-    console.log("User joined room " + chatRoom);
+  socket.on("join-chat", (chatRoomId) => {
+    socket.join(chatRoomId);
+    console.log("User joined room " + chatRoomId);
   });
 
   socket.on("typing", (room) => {
